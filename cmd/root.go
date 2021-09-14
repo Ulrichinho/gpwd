@@ -24,6 +24,9 @@ import (
 	"os"
 	"strconv"
 
+	"golang.design/x/clipboard"
+
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
@@ -36,25 +39,33 @@ var (
 	length         int
 	quantity       int
 	noSpecialsChar bool
+	export         bool
 )
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "gpwd",
-	Version: "1.0.1",
+	Version: "1.0.2",
 	Short:   "generate password(s)",
 	Long:    `Golang CLI app which generate random password(s) with API : https://www.motdepasse.xyz/api`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("--length:", length)
-		fmt.Println("--quantity:", quantity)
-		fmt.Println("--no-specials-char:", noSpecialsChar)
+		// test length flag
+		switch {
+		case length < 12 && length >= 8:
+			color.Yellow("[WARNING] it's not recommended to generate password(s) with a length less than 12 chars")
+		case length < 8:
+			color.Red("[ALERT] it's not secure!!Length min is of 8")
+			os.Exit(1)
+		}
 
-		getRandomPassword(length, quantity, noSpecialsChar)
+		if quantity > 32 {
+			color.Cyan("[INFO] Cannot create more of 32 passwords for reasons of performance")
+			os.Exit(1)
+		}
+
+		getRandomPassword(length, quantity, noSpecialsChar, export)
 	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
@@ -66,6 +77,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&length, "length", "l", 12, "define the length of password")
 	rootCmd.PersistentFlags().IntVarP(&quantity, "quantity", "q", 1, "define the number of password to generate")
 	rootCmd.PersistentFlags().BoolVar(&noSpecialsChar, "no-specials-char", false, "define if you don't want special character")
+	rootCmd.PersistentFlags().BoolVarP(&export, "export", "e", false, "define if you want export passwords")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -98,8 +110,9 @@ type Password struct {
 	Password []string `json:"passwords"`
 }
 
-func getRandomPassword(l, q int, nsc bool) {
+func getRandomPassword(l, q int, nsc bool, e bool) {
 	url := ""
+	// define url in function of flag --no-specilas-char
 	if nsc {
 		url = APIURL + "?include_digits&include_lowercase&include_uppercase&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
 	} else {
@@ -112,8 +125,46 @@ func getRandomPassword(l, q int, nsc bool) {
 		fmt.Printf("Could not unmarshal reponseBytes. %v", err)
 	}
 
-	for _, p := range password.Password {
-		fmt.Println(p)
+	// test export flag
+	if e {
+		f, err := os.OpenFile("password.txt", os.O_CREATE|os.O_WRONLY, 0600)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		for _, p := range password.Password {
+			_, err = f.WriteString(p + "\n")
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		if q == 1 {
+			for _, p := range password.Password {
+				fmt.Println(p)
+				clipboard.Write(clipboard.FmtText, []byte(p))
+				fmt.Println("Copied")
+			}
+		} else {
+			for _, p := range password.Password {
+				fmt.Println(p)
+			}
+		}
+
+		color.Green("[SUCCESS] %v password(s) export in 'password.txt'\n", q)
+	} else {
+		if q == 1 {
+			for _, p := range password.Password {
+				fmt.Println(p)
+				clipboard.Write(clipboard.FmtText, []byte(p))
+				fmt.Println("Copied")
+			}
+		} else {
+			for _, p := range password.Password {
+				fmt.Println(p)
+			}
+		}
 	}
 }
 
