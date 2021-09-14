@@ -1,4 +1,4 @@
-module github.com/Ulrichinho/gpwd
+module gpwd
 
 go 1.17
 

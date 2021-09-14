@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/Ulricinho/gpwd/cmd"
+import "gpwd/cmd"
 
 func main() {
 	cmd.Execute()
