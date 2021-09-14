@@ -16,28 +16,41 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
+	"strconv"
+
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+// https://levelup.gitconnected.com/exploring-go-packages-cobra-fce6c4e331d6
+
+var (
+	cfgFile        string
+	length         int
+	quantity       int
+	noSpecialsChar bool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "gpwd",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:     "gpwd",
+	Version: "1.0.1",
+	Short:   "generate password(s)",
+	Long:    `Golang CLI app which generate random password(s) with API : https://www.motdepasse.xyz/api`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("--length:", length)
+		fmt.Println("--quantity:", quantity)
+		fmt.Println("--no-specials-char:", noSpecialsChar)
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+		getRandomPassword(length, quantity, noSpecialsChar)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -49,15 +62,10 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gpwd.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().IntVarP(&length, "length", "l", 12, "define the length of password")
+	rootCmd.PersistentFlags().IntVarP(&quantity, "quantity", "q", 1, "define the number of password to generate")
+	rootCmd.PersistentFlags().BoolVar(&noSpecialsChar, "no-specials-char", false, "define if you don't want special character")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -82,4 +90,56 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+const APIURL = "https://api.motdepasse.xyz/create/"
+
+type Password struct {
+	Password []string `json:"passwords"`
+}
+
+func getRandomPassword(l, q int, nsc bool) {
+	url := ""
+	if nsc {
+		url = APIURL + "?include_digits&include_lowercase&include_uppercase&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
+	} else {
+		url = APIURL + "?include_digits&include_lowercase&include_uppercase&include_special_characters&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
+	}
+	resBytes := getPasswordData(url)
+	password := Password{}
+
+	if err := json.Unmarshal(resBytes, &password); err != nil {
+		fmt.Printf("Could not unmarshal reponseBytes. %v", err)
+	}
+
+	for _, p := range password.Password {
+		fmt.Println(p)
+	}
+}
+
+func getPasswordData(baseAPI string) []byte {
+	r, err := http.NewRequest(
+		http.MethodGet,
+		baseAPI,
+		nil,
+	)
+
+	if err != nil {
+		log.Printf("Couldn't request a password. %v", err)
+	}
+
+	r.Header.Add("Accept", "application/json")
+	r.Header.Add("User-Agent", "https://www.motdepasse.xyz/api")
+
+	res, err := http.DefaultClient.Do(r)
+	if err != nil {
+		log.Printf("Couln't make a request. %v", err)
+	}
+
+	resBytes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("Couln't read response body. %v", err)
+	}
+
+	return resBytes
 }
