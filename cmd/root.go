@@ -110,22 +110,28 @@ type Password struct {
 	Password []string `json:"passwords"`
 }
 
-func getRandomPassword(l, q int, nsc bool, e bool) {
-	url := ""
-	// define url in function of flag --no-specilas-char
+func getUrl(l, q int, nsc bool) string {
 	if nsc {
-		url = APIURL + "?include_digits&include_lowercase&include_uppercase&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
+		return APIURL + "?include_digits&include_lowercase&include_uppercase&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
+	}
+	return APIURL + "?include_digits&include_lowercase&include_uppercase&include_special_characters&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
+}
+
+func mapPassword(q int, pwd *Password) {
+	if q == 1 {
+		for _, p := range pwd.Password {
+			fmt.Println(p)
+			clipboard.Write(clipboard.FmtText, []byte(p))
+			fmt.Println("Copied")
+		}
 	} else {
-		url = APIURL + "?include_digits&include_lowercase&include_uppercase&include_special_characters&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
+		for _, p := range pwd.Password {
+			fmt.Println(p)
+		}
 	}
-	resBytes := getPasswordData(url)
-	password := Password{}
+}
 
-	if err := json.Unmarshal(resBytes, &password); err != nil {
-		fmt.Printf("Could not unmarshal reponseBytes. %v", err)
-	}
-
-	// test export flag
+func exportPassword(q int, e bool, pwd *Password) {
 	if e {
 		f, err := os.OpenFile("password.txt", os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
@@ -133,41 +139,36 @@ func getRandomPassword(l, q int, nsc bool, e bool) {
 		}
 		defer f.Close()
 
-		for _, p := range password.Password {
+		for _, p := range pwd.Password {
 			_, err = f.WriteString(p + "\n")
 			if err != nil {
 				panic(err)
 			}
 		}
 
-		if q == 1 {
-			for _, p := range password.Password {
-				fmt.Println(p)
-				clipboard.Write(clipboard.FmtText, []byte(p))
-				fmt.Println("Copied")
-			}
-		} else {
-			for _, p := range password.Password {
-				fmt.Println(p)
-			}
-		}
+		mapPassword(q, pwd)
 
 		color.Green("[SUCCESS] %v password(s) export in 'password.txt'\n", q)
 	} else {
-		if q == 1 {
-			for _, p := range password.Password {
-				fmt.Println(p)
-				clipboard.Write(clipboard.FmtText, []byte(p))
-				fmt.Println("Copied")
-			}
-		} else {
-			for _, p := range password.Password {
-				fmt.Println(p)
-			}
-		}
+		mapPassword(q, pwd)
 	}
 }
 
+// recover data and format result
+func getRandomPassword(l, q int, nsc bool, e bool) {
+	url := getUrl(l, q, nsc)
+	resBytes := getPasswordData(url)
+	password := Password{}
+
+	if err := json.Unmarshal(resBytes, &password); err != nil {
+		fmt.Printf("Could not unmarshal reponseBytes. %v", err)
+	}
+
+	// export ?
+	exportPassword(q, e, &password)
+}
+
+// recover data from API
 func getPasswordData(baseAPI string) []byte {
 	r, err := http.NewRequest(
 		http.MethodGet,
