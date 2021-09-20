@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"golang.design/x/clipboard"
 
@@ -40,6 +41,7 @@ var (
 	quantity       int
 	noSpecialsChar bool
 	export         bool
+	statistic      bool
 )
 
 var rootCmd = &cobra.Command{
@@ -48,7 +50,9 @@ var rootCmd = &cobra.Command{
 	Short:   "generate password(s)",
 	Long:    `Golang CLI app which generate random password(s) with API : https://www.motdepasse.xyz/api`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// test length flag
+
+		start := time.Now()
+
 		switch {
 		case length < 12 && length >= 8:
 			color.Yellow("[WARNING] it's not recommended to generate password(s) with a length less than 12 chars")
@@ -63,6 +67,13 @@ var rootCmd = &cobra.Command{
 		}
 
 		getRandomPassword(length, quantity, noSpecialsChar, export)
+
+		end := time.Now()
+
+		if statistic {
+			elapsed := end.Sub(start)
+			fmt.Printf("Finished in %v\n", elapsed)
+		}
 	},
 }
 
@@ -78,6 +89,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&quantity, "quantity", "q", 1, "define the number of password to generate")
 	rootCmd.PersistentFlags().BoolVar(&noSpecialsChar, "no-specials-char", false, "define if you don't want special character")
 	rootCmd.PersistentFlags().BoolVarP(&export, "export", "e", false, "define if you want export passwords")
+	rootCmd.PersistentFlags().BoolVarP(&statistic, "statistic", "s", false, "log the stats (speed, ...)")
 }
 
 // initConfig reads in config file and ENV variables if set.

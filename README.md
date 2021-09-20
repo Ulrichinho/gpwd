@@ -8,7 +8,7 @@ Golang CLI app which generate random password(s) with API :
 - Generate password :
 
 ```
-$ gpwd [-l | --length <length>] [-q | --quantity <quantity>] [--no-specials-char] [-e | --export]
+$ gpwd [-l | --length <length>] [-q | --quantity <quantity>] [--no-specials-char] [-e | --export] [-s | statistic]
 ```
 Example : generate 4 password of 15 chars of length with an export
 ```
