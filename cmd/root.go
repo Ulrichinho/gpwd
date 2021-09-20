@@ -50,30 +50,17 @@ var rootCmd = &cobra.Command{
 	Short:   "generate password(s)",
 	Long:    `Golang CLI app which generate random password(s) with API : https://www.motdepasse.xyz/api`,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		start := time.Now()
 
-		switch {
-		case length < 12 && length >= 8:
-			color.Yellow("[WARNING] it's not recommended to generate password(s) with a length less than 12 chars")
-		case length < 8:
-			color.Red("[ALERT] it's not secure!!Length min is of 8")
-			os.Exit(1)
-		}
+		checkLength(length)
 
-		if quantity > 32 {
-			color.Cyan("[INFO] Cannot create more of 32 passwords for reasons of performance")
-			os.Exit(1)
-		}
+		checkQuantity(quantity)
 
 		getRandomPassword(length, quantity, noSpecialsChar, export)
 
 		end := time.Now()
 
-		if statistic {
-			elapsed := end.Sub(start)
-			fmt.Printf("Finished in %v\n", elapsed)
-		}
+		checkStatFlag(start, end)
 	},
 }
 
@@ -120,6 +107,30 @@ const APIURL = "https://api.motdepasse.xyz/create/"
 
 type Password struct {
 	Password []string `json:"passwords"`
+}
+
+func checkLength(l int) {
+	switch {
+	case length < 12 && length >= 8:
+		color.Yellow("[WARNING] it's not recommended to generate password(s) with a length less than 12 chars")
+	case length < 8:
+		color.Red("[ALERT] it's not secure!!Length min is of 8")
+		os.Exit(1)
+	}
+}
+
+func checkQuantity(q int) {
+	if quantity > 32 {
+		color.Cyan("[INFO] Cannot create more of 32 passwords for reasons of performance")
+		os.Exit(1)
+	}
+}
+
+func checkStatFlag(start, end time.Time) {
+	if statistic {
+		elapsed := end.Sub(start)
+		fmt.Printf("Finished in %v\n", elapsed)
+	}
 }
 
 func getUrl(l, q int, nsc bool) string {
