@@ -22,8 +22,6 @@ import (
 
 	"gpwd/api"
 
-	"golang.design/x/clipboard"
-
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
@@ -78,11 +76,11 @@ var rootCmd = &cobra.Command{
 				}
 			}
 
-			mapPassword(quantity, &passwords)
+			api.MapPassword(quantity, &passwords)
 
 			color.Green("[SUCCESS] %v password(s) export in 'password.txt'\n", quantity)
 		} else {
-			mapPassword(quantity, &passwords)
+			api.MapPassword(quantity, &passwords)
 		}
 
 		end := time.Now()
@@ -136,20 +134,5 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
-}
-
-// Handle log of password(s)
-func mapPassword(q int, pwd *api.Password) {
-	if q == 1 {
-		for _, p := range pwd.Password {
-			fmt.Println(p)
-			clipboard.Write(clipboard.FmtText, []byte(p))
-			fmt.Println("Copied")
-		}
-	} else {
-		for _, p := range pwd.Password {
-			fmt.Println(p)
-		}
 	}
 }
