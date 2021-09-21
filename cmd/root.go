@@ -42,8 +42,8 @@ var (
 var rootCmd = &cobra.Command{
 	Use:     "gpwd",
 	Version: "1.0.1",
-	Short:   "generate password(s)",
-	Long:    `Golang CLI app which generate random password(s) with API : https://www.motdepasse.xyz/api`,
+	Short:   "Golang CLI app which generate random password(s) with API : https://www.motdepasse.xyz/api",
+	Long:    `This CLI app allows to generate passwords or keys with a limit of 512 characters in length and a maximum of 30 passwords at the same time. With the possibility of making exports and having an eye on statistics`,
 	Run: func(cmd *cobra.Command, args []string) {
 		start := time.Now()
 
