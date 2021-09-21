@@ -48,6 +48,9 @@ var rootCmd = &cobra.Command{
 		start := time.Now()
 
 		switch {
+		case length > 512:
+			color.Cyan("[INFO] Cannot create password with more of 512 character for reasons of limit of API")
+			os.Exit(1)
 		case length < 12 && length >= 8:
 			color.Yellow("[WARNING] it's not recommended to generate password(s) with a length less than 12 chars")
 		case length < 8:
@@ -55,8 +58,8 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if quantity > 32 {
-			color.Cyan("[INFO] Cannot create more of 32 passwords for reasons of performance")
+		if quantity > 30 {
+			color.Cyan("[INFO] Cannot create more of 30 passwords for reasons of limit of API")
 			os.Exit(1)
 		}
 

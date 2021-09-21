@@ -33,15 +33,15 @@ type Password struct {
 }
 
 // get API url in function of flags
-func getAPIUrl(l, q int, nsc bool) string {
+func getAPIUrl(len, qa int, nsc bool) string {
 	if nsc {
-		return APIURL + "include_digits&include_lowercase&include_uppercase&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
+		return APIURL + "include_digits&include_lowercase&include_uppercase&password_length=" + strconv.Itoa(len) + "&quantity=" + strconv.Itoa(qa)
 	}
-	return APIURL + "include_digits&include_lowercase&include_uppercase&include_special_characters&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
+	return APIURL + "include_digits&include_lowercase&include_uppercase&include_special_characters&password_length=" + strconv.Itoa(len) + "&quantity=" + strconv.Itoa(qa)
 }
 
 // recover data from API
-func getPasswordDataFromAPI(baseAPI string) []byte {
+func getPasswordDataFromAPI(baseAPI string) ([]byte, int) {
 	r, err := http.NewRequest(
 		http.MethodGet,
 		baseAPI,
@@ -49,7 +49,8 @@ func getPasswordDataFromAPI(baseAPI string) []byte {
 	)
 
 	if err != nil {
-		log.Printf("Couldn't request a password. %v", err)
+		log.Printf("Couldn't request a password. %v\n", err)
+		return nil, 400
 	}
 
 	r.Header.Add("Accept", "application/json")
@@ -57,38 +58,38 @@ func getPasswordDataFromAPI(baseAPI string) []byte {
 
 	res, err := http.DefaultClient.Do(r)
 	if err != nil {
-		log.Printf("Couln't make a request. %v", err)
+		log.Printf("Couln't make a request. %v\n", err)
+		return nil, 400
 	}
 
 	resBytes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Couln't read response body. %v", err)
+		log.Printf("Couln't read response body. %v\n", err)
+		return nil, 406
 	}
 
-	return resBytes
+	return resBytes, 200
 }
 
 // recover data and format result
 func GetRandomPassword(len, qa int, nsc bool) Password {
 	url := getAPIUrl(len, qa, nsc)
-	resBytes := getPasswordDataFromAPI(url)
+	resBytes, _ := getPasswordDataFromAPI(url)
 	password := Password{}
 
 	if err := json.Unmarshal(resBytes, &password); err != nil {
-		fmt.Printf("Could not unmarshal reponseBytes. %v", err)
+		fmt.Printf("Could not unmarshal reponseBytes. %v\n", err)
 	}
 
 	return password
 }
 
 // Handle log of password(s)
-func MapPassword(q int, pwd *Password) {
-	if q == 1 {
-		for _, p := range pwd.Password {
-			fmt.Println(p)
-			clipboard.Write(clipboard.FmtText, []byte(p))
-			fmt.Println("Copied")
-		}
+func MapPassword(qa int, pwd *Password) {
+	if qa == 1 {
+		fmt.Println(pwd.Password[0])
+		clipboard.Write(clipboard.FmtText, []byte(pwd.Password[0]))
+		fmt.Println("Copied")
 	} else {
 		for _, p := range pwd.Password {
 			fmt.Println(p)
