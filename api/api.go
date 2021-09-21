@@ -38,19 +38,6 @@ func getAPIUrl(l, q int, nsc bool) string {
 	return APIURL + "include_digits&include_lowercase&include_uppercase&include_special_characters&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
 }
 
-// recover data and format result
-func GetRandomPassword(len, qa int, nsc bool) Password {
-	url := getAPIUrl(len, qa, nsc)
-	resBytes := getPasswordDataFromAPI(url)
-	password := Password{}
-
-	if err := json.Unmarshal(resBytes, &password); err != nil {
-		fmt.Printf("Could not unmarshal reponseBytes. %v", err)
-	}
-
-	return password
-}
-
 // recover data from API
 func getPasswordDataFromAPI(baseAPI string) []byte {
 	r, err := http.NewRequest(
@@ -77,4 +64,17 @@ func getPasswordDataFromAPI(baseAPI string) []byte {
 	}
 
 	return resBytes
+}
+
+// recover data and format result
+func GetRandomPassword(len, qa int, nsc bool) Password {
+	url := getAPIUrl(len, qa, nsc)
+	resBytes := getPasswordDataFromAPI(url)
+	password := Password{}
+
+	if err := json.Unmarshal(resBytes, &password); err != nil {
+		fmt.Printf("Could not unmarshal reponseBytes. %v", err)
+	}
+
+	return password
 }
