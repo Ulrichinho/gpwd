@@ -65,7 +65,8 @@ var rootCmd = &cobra.Command{
 
 		passwords := api.GetRandomPassword(length, quantity, noSpecialsChar)
 
-		if export {
+		switch {
+		case export && len(args) == 0:
 			f, err := os.OpenFile("password.txt", os.O_CREATE|os.O_WRONLY, 0600)
 			if err != nil {
 				panic(err)
@@ -82,7 +83,24 @@ var rootCmd = &cobra.Command{
 			api.MapPassword(quantity, &passwords)
 
 			color.Green("[SUCCESS] %v password(s) export in 'password.txt'\n", quantity)
-		} else {
+		case export && len(args) == 1:
+			f, err := os.OpenFile(args[0]+".txt", os.O_CREATE|os.O_WRONLY, 0600)
+			if err != nil {
+				panic(err)
+			}
+			defer f.Close()
+
+			for _, p := range passwords.Password {
+				_, err = f.WriteString(p + "\n")
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			api.MapPassword(quantity, &passwords)
+
+			color.Green("[SUCCESS] %v password(s) export in '%v.txt'\n", quantity, args[0])
+		default:
 			api.MapPassword(quantity, &passwords)
 		}
 
