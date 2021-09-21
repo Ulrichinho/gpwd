@@ -22,8 +22,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-
-	"golang.design/x/clipboard"
 )
 
 const APIURL = "https://api.motdepasse.xyz/create/?"
@@ -88,8 +86,6 @@ func GetRandomPassword(len, qa int, nsc bool) Password {
 func MapPassword(qa int, pwd *Password) {
 	if qa == 1 {
 		fmt.Println(pwd.Password[0])
-		clipboard.Write(clipboard.FmtText, []byte(pwd.Password[0]))
-		fmt.Println("Copied")
 	} else {
 		for _, p := range pwd.Password {
 			fmt.Println(p)

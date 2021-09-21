@@ -3,10 +3,9 @@ module gpwd
 go 1.17
 
 require (
-	github.com/fatih/color v1.12.0
+	github.com/fatih/color v1.13.0
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
-	golang.design/x/clipboard v0.5.2
 )
 
 require (
