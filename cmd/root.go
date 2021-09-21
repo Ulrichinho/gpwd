@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2021 GROLHIER Ulrich <grolhier.u@gmail.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,14 +16,11 @@ limitations under the License.
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
 	"os"
-	"strconv"
 	"time"
+
+	"gpwd/api"
 
 	"golang.design/x/clipboard"
 
@@ -33,8 +30,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// https://levelup.gitconnected.com/exploring-go-packages-cobra-fce6c4e331d6
-
+// flag variables
 var (
 	cfgFile        string
 	length         int
@@ -44,32 +40,72 @@ var (
 	statistic      bool
 )
 
+// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "gpwd",
-	Version: "1.0.2",
+	Version: "1.0.1",
 	Short:   "generate password(s)",
 	Long:    `Golang CLI app which generate random password(s) with API : https://www.motdepasse.xyz/api`,
 	Run: func(cmd *cobra.Command, args []string) {
 		start := time.Now()
 
-		checkLength(length)
+		switch {
+		case length < 12 && length >= 8:
+			color.Yellow("[WARNING] it's not recommended to generate password(s) with a length less than 12 chars")
+		case length < 8:
+			color.Red("[ALERT] it's not secure!!Length min is of 8")
+			os.Exit(1)
+		}
 
-		checkQuantity(quantity)
+		if quantity > 32 {
+			color.Cyan("[INFO] Cannot create more of 32 passwords for reasons of performance")
+			os.Exit(1)
+		}
 
-		getRandomPassword(length, quantity, noSpecialsChar, export)
+		passwords := api.GetRandomPassword(length, quantity, noSpecialsChar)
+
+		if export {
+			f, err := os.OpenFile("password.txt", os.O_CREATE|os.O_WRONLY, 0600)
+			if err != nil {
+				panic(err)
+			}
+			defer f.Close()
+
+			for _, p := range passwords.Password {
+				_, err = f.WriteString(p + "\n")
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			mapPassword(quantity, &passwords)
+
+			color.Green("[SUCCESS] %v password(s) export in 'password.txt'\n", quantity)
+		} else {
+			mapPassword(quantity, &passwords)
+		}
 
 		end := time.Now()
 
-		checkStatFlag(start, end)
+		if statistic {
+			elapsed := end.Sub(start)
+			fmt.Printf("Finished in %v\n", elapsed)
+		}
 	},
 }
 
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	// Here you will define your flags and configuration settings.
+	// Cobra supports persistent flags, which, if defined here,
+	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gpwd.yaml)")
 	rootCmd.PersistentFlags().IntVarP(&length, "length", "l", 12, "define the length of password")
@@ -103,44 +139,8 @@ func initConfig() {
 	}
 }
 
-const APIURL = "https://api.motdepasse.xyz/create/"
-
-type Password struct {
-	Password []string `json:"passwords"`
-}
-
-func checkLength(l int) {
-	switch {
-	case length < 12 && length >= 8:
-		color.Yellow("[WARNING] it's not recommended to generate password(s) with a length less than 12 chars")
-	case length < 8:
-		color.Red("[ALERT] it's not secure!!Length min is of 8")
-		os.Exit(1)
-	}
-}
-
-func checkQuantity(q int) {
-	if quantity > 32 {
-		color.Cyan("[INFO] Cannot create more of 32 passwords for reasons of performance")
-		os.Exit(1)
-	}
-}
-
-func checkStatFlag(start, end time.Time) {
-	if statistic {
-		elapsed := end.Sub(start)
-		fmt.Printf("Finished in %v\n", elapsed)
-	}
-}
-
-func getUrl(l, q int, nsc bool) string {
-	if nsc {
-		return APIURL + "?include_digits&include_lowercase&include_uppercase&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
-	}
-	return APIURL + "?include_digits&include_lowercase&include_uppercase&include_special_characters&password_length=" + strconv.Itoa(l) + "&quantity=" + strconv.Itoa(q)
-}
-
-func mapPassword(q int, pwd *Password) {
+// Handle log of password(s)
+func mapPassword(q int, pwd *api.Password) {
 	if q == 1 {
 		for _, p := range pwd.Password {
 			fmt.Println(p)
@@ -152,69 +152,4 @@ func mapPassword(q int, pwd *Password) {
 			fmt.Println(p)
 		}
 	}
-}
-
-func exportPassword(q int, e bool, pwd *Password) {
-	if e {
-		f, err := os.OpenFile("password.txt", os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			panic(err)
-		}
-		defer f.Close()
-
-		for _, p := range pwd.Password {
-			_, err = f.WriteString(p + "\n")
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		mapPassword(q, pwd)
-
-		color.Green("[SUCCESS] %v password(s) export in 'password.txt'\n", q)
-	} else {
-		mapPassword(q, pwd)
-	}
-}
-
-// recover data and format result
-func getRandomPassword(l, q int, nsc bool, e bool) {
-	url := getUrl(l, q, nsc)
-	resBytes := getPasswordData(url)
-	password := Password{}
-
-	if err := json.Unmarshal(resBytes, &password); err != nil {
-		fmt.Printf("Could not unmarshal reponseBytes. %v", err)
-	}
-
-	// export ?
-	exportPassword(q, e, &password)
-}
-
-// recover data from API
-func getPasswordData(baseAPI string) []byte {
-	r, err := http.NewRequest(
-		http.MethodGet,
-		baseAPI,
-		nil,
-	)
-
-	if err != nil {
-		log.Printf("Couldn't request a password. %v", err)
-	}
-
-	r.Header.Add("Accept", "application/json")
-	r.Header.Add("User-Agent", "https://www.motdepasse.xyz/api")
-
-	res, err := http.DefaultClient.Do(r)
-	if err != nil {
-		log.Printf("Couln't make a request. %v", err)
-	}
-
-	resBytes, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Printf("Couln't read response body. %v", err)
-	}
-
-	return resBytes
 }
