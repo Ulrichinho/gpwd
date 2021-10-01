@@ -23,16 +23,14 @@ func TestGetPasswordFromAPI(t *testing.T) {
 func TestGetRandomPassword(t *testing.T) {
 	assert := assert.New(t)
 	password := GetRandomPassword(12, 1, false).Password[0]
-	// check length
-	assert.Equal(len(password), 12)
 	// match if there are symbols
-	hasSymbol := func(s string) bool {
+	hasGraphic := func(s string) bool {
 		for _, letter := range s {
-			if unicode.IsSymbol(letter) {
+			if unicode.IsGraphic(letter) {
 				return true
 			}
 		}
 		return false
 	}
-	assert.Equal(hasSymbol(password), true)
+	assert.Equal(hasGraphic(password), true)
 }

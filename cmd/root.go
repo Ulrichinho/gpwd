@@ -67,35 +67,13 @@ var rootCmd = &cobra.Command{
 
 		switch {
 		case export && len(args) == 0:
-			f, err := os.OpenFile("password.txt", os.O_CREATE|os.O_WRONLY, 0600)
-			if err != nil {
-				panic(err)
-			}
-			defer f.Close()
-
-			for _, p := range passwords.Password {
-				_, err = f.WriteString(p + "\n")
-				if err != nil {
-					panic(err)
-				}
-			}
+			WritePasswordInFile(args, &passwords)
 
 			api.MapPassword(quantity, &passwords)
 
 			color.Green("[SUCCESS] %v password(s) export in 'password.txt'\n", quantity)
 		case export && len(args) == 1:
-			f, err := os.OpenFile(args[0]+".txt", os.O_CREATE|os.O_WRONLY, 0600)
-			if err != nil {
-				panic(err)
-			}
-			defer f.Close()
-
-			for _, p := range passwords.Password {
-				_, err = f.WriteString(p + "\n")
-				if err != nil {
-					panic(err)
-				}
-			}
+			WritePasswordInFile(args, &passwords)
 
 			api.MapPassword(quantity, &passwords)
 
@@ -155,5 +133,31 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+func CheckErr(msg interface{}) {
+	if msg != nil {
+		fmt.Fprintln(os.Stderr, "Error:", msg)
+		os.Exit(1) 
+	}
+}
+
+// write password in a file
+func WritePasswordInFile(args []string, passwords *api.Password) {
+	var f *os.File
+	var err error
+	if len(args) == 0 {
+		f, err = os.OpenFile("password.txt", os.O_CREATE|os.O_WRONLY, 0600)
+		CheckErr(err)
+	} else {
+		f, err = os.OpenFile(args[0]+".txt", os.O_CREATE|os.O_WRONLY, 0600)
+		CheckErr(err)
+	}
+	defer f.Close()
+
+	for _, p := range passwords.Password {
+		_, err = f.WriteString(p + "\n")
+		CheckErr(err)
 	}
 }
