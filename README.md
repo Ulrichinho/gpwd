@@ -1,5 +1,7 @@
 # gpwd
 
+## ⚠***Please, see the [gktool](https://github.com/Ulrichinho/gktool) repo. It's a better cli tool***
+
 ## [Install](#install) | [CLI Usage](#usage) | [License](#license)
 
 Golang CLI app which generate random password(s) with open API :
@@ -16,7 +18,7 @@ This CLI app allows to generate passwords or keys with a limit of 512 characters
 Go ahead compile it yourself :
 
 ```bash
-go get github.com/Ulrichinho/gpwd
+go install github.com/Ulrichinho/gpwd@latest
 ```
 
 ## Usage
